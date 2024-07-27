@@ -1,7 +1,11 @@
-
+use core::str;
 use std::borrow::Cow;
 
-use nom::character::complete::{one_of};
+use nom::character::complete::{crlf, line_ending, not_line_ending, one_of};
+use nom::character::streaming::char;
+use nom::combinator::map_res;
+use nom::complete::tag;
+use nom::sequence::delimited;
 use nom::IResult;
 
 #[derive(PartialEq, Clone, Debug, Hash)]
@@ -50,7 +54,11 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
-    let (data, val) = nom::bytes::complete::take_until("\r\n")(data)?;
-    let (data, _) = nom::bytes::complete::tag("\r\n")(data)?;
-    Ok((data, RespType::simple_string(val)))
+    let parser = delimited(char('+'), line_ending, crlf);
+    let (data, result) = map_res(
+        parser,
+        |s: &str| -> Result<RespType, std::convert::Infallible> { Ok(RespType::simple_string(s)) },
+    )(data)?;
+
+    Ok((data, result))
 }
