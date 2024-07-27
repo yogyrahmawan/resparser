@@ -36,7 +36,7 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
     let (data, resp_type) = one_of("+-:$*_#,(!=%~>")(data)?;
     match resp_type {
         '+' => parse_simple_string(data),
-        '-' => todo!(),
+        '-' => parse_simple_error(data),
         ':' => todo!(),
         '$' => todo!(),
         '*' => todo!(),
@@ -54,9 +54,17 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
-    let parser = delimited(char('+'), line_ending, crlf);
     let (data, result) = map_res(
-        parser,
+        delimited(char('+'), line_ending, crlf),
+        |s: &str| -> Result<RespType, std::convert::Infallible> { Ok(RespType::simple_string(s)) },
+    )(data)?;
+
+    Ok((data, result))
+}
+
+fn parse_simple_error(data: &str) -> IResult<&str, RespType> {
+    let (data, result) = map_res(
+        delimited(char('-'), line_ending, crlf),
         |s: &str| -> Result<RespType, std::convert::Infallible> { Ok(RespType::simple_string(s)) },
     )(data)?;
 
