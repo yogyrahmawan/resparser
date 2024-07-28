@@ -1,10 +1,12 @@
 use core::str;
 
 use nom::branch::alt;
+use nom::bytes::complete::take;
 use nom::character::complete::{crlf, i64, not_line_ending};
 use nom::character::streaming::char;
 use nom::combinator::map;
-use nom::sequence::delimited;
+use nom::error::ErrorKind;
+use nom::sequence::{delimited, terminated};
 use nom::IResult;
 
 #[derive(PartialEq, Clone, Debug, Hash)]
@@ -22,7 +24,7 @@ pub enum RespType<'a> {
     Pushes,
 }
 pub fn parse(data: &str) -> IResult<&str, RespType> {
-    alt((parse_simple_string, parse_simple_error, parse_integer))(data)
+    alt((parse_simple_string, parse_simple_error, parse_integer, parse_bulk_string))(data)
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
@@ -41,4 +43,20 @@ fn parse_integer(data: &str) -> IResult<&str, RespType> {
     map(delimited(char(':'), i64, crlf), |s: i64| {
         RespType::Integer(s)
     })(data)
+}
+
+fn parse_bulk_string(data: &str) -> IResult<&str, RespType> {
+    let (data, len) = delimited(char('$'), i64, crlf)(data)?;
+    Ok(match len {
+        -1 => (data, RespType::Null),
+        0.. => map(terminated(take(len as usize), crlf), |s: &str| {
+            RespType::BulkString(s)
+        })(data)?,
+        _ => {
+            return Err(nom::Err::Failure(nom::error::Error::new(
+                data,
+                ErrorKind::Verify,
+            )))
+        }
+    })
 }

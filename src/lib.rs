@@ -24,4 +24,17 @@ mod tests {
         assert_eq!(parse(":1000\r\n"), Ok(("", RespType::Integer(1000))));
         assert_eq!(parse(":-1000\r\n"), Ok(("", RespType::Integer(-1000))));
     }
+
+    #[test]
+    fn test_parse_bulk_string() {
+        assert_eq!(
+            parse("$5\r\nhello\r\n"),
+            Ok(("", RespType::BulkString("hello")))
+        );
+
+        assert_eq!(
+            parse("$0\r\n\r\n"),
+            Ok(("", RespType::BulkString("")))
+        );
+    }
 }
