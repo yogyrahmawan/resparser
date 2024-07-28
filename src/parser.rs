@@ -1,7 +1,7 @@
 use core::str;
 
 use nom::branch::alt;
-use nom::character::complete::{crlf, not_line_ending};
+use nom::character::complete::{crlf, i64, not_line_ending};
 use nom::character::streaming::char;
 use nom::combinator::map;
 use nom::sequence::delimited;
@@ -22,7 +22,7 @@ pub enum RespType<'a> {
     Pushes,
 }
 pub fn parse(data: &str) -> IResult<&str, RespType> {
-    alt((parse_simple_string, parse_simple_error))(data)
+    alt((parse_simple_string, parse_simple_error, parse_integer))(data)
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
@@ -33,6 +33,12 @@ fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
 
 fn parse_simple_error(data: &str) -> IResult<&str, RespType> {
     map(delimited(char('-'), not_line_ending, crlf), |s: &str| {
-        RespType::SimpleString(s)
+        RespType::Error(s)
+    })(data)
+}
+
+fn parse_integer(data: &str) -> IResult<&str, RespType> {
+    map(delimited(char(':'), i64, crlf), |s: i64| {
+        RespType::Integer(s)
     })(data)
 }

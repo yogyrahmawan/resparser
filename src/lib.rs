@@ -12,4 +12,16 @@ mod tests {
         assert!(parse("+O\nK\r\n").is_err());
         assert!(parse("+OK\n\r").is_err());
     }
+
+    #[test]
+    fn test_simple_error() {
+        assert_eq!(parse("-ERROR\r\n"), Ok(("", RespType::Error("ERROR"))));
+        assert!(parse("-ERROR\n\r").is_err());
+    }
+
+    #[test]
+    fn test_parse_integer() {
+        assert_eq!(parse(":1000\r\n"), Ok(("", RespType::Integer(1000))));
+        assert_eq!(parse(":-1000\r\n"), Ok(("", RespType::Integer(-1000))));
+    }
 }
