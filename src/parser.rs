@@ -6,6 +6,7 @@ use nom::character::complete::{crlf, i64, not_line_ending};
 use nom::character::streaming::char;
 use nom::combinator::map;
 use nom::error::ErrorKind;
+use nom::multi::many_m_n;
 use nom::sequence::{delimited, terminated};
 use nom::IResult;
 
@@ -24,7 +25,7 @@ pub enum RespType<'a> {
     Pushes,
 }
 pub fn parse(data: &str) -> IResult<&str, RespType> {
-    alt((parse_simple_string, parse_simple_error, parse_integer, parse_bulk_string))(data)
+    alt((parse_simple_string, parse_simple_error, parse_integer, parse_bulk_string, parse_array))(data)
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
@@ -59,4 +60,10 @@ fn parse_bulk_string(data: &str) -> IResult<&str, RespType> {
             )))
         }
     })
+}
+
+fn parse_array(data: &str) -> IResult<&str, RespType> {
+    let (data, len) = delimited(char('*'), i64, crlf)(data)?;
+    let (data, elements) = many_m_n(len.try_into().unwrap(), len.try_into().unwrap(), parse)(data)?;
+    Ok((data, RespType::Array(elements)))
 }
