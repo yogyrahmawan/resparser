@@ -79,4 +79,19 @@ mod tests {
         let result = parse(input);
         assert_eq!(result, Ok(("", expected)));
     }
+
+    #[test]
+    fn test_parse_null() {
+        let input = "_\r\n";
+        let expected = RespType::Null;
+        let result = parse(input);
+        assert_eq!(result, Ok(("", expected)));
+    }
+
+    #[test]
+    fn test_parse_boolean() {
+        assert_eq!(parse("#t\r\n"), Ok(("", RespType::Boolean(true))));
+        assert_eq!(parse("#f\r\n"), Ok(("", RespType::Boolean(false))));
+        assert!(parse("#s\r\n").is_err());
+    }
 }

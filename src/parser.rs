@@ -1,7 +1,7 @@
 use core::str;
 
 use nom::branch::alt;
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::character::complete::{crlf, i64, not_line_ending};
 use nom::character::streaming::char;
 use nom::combinator::map;
@@ -25,7 +25,15 @@ pub enum RespType<'a> {
     Pushes,
 }
 pub fn parse(data: &str) -> IResult<&str, RespType> {
-    alt((parse_simple_string, parse_simple_error, parse_integer, parse_bulk_string, parse_array))(data)
+    alt((
+        parse_null,
+        parse_simple_string,
+        parse_simple_error,
+        parse_integer,
+        parse_bulk_string,
+        parse_array,
+        parse_boolean,
+    ))(data)
 }
 
 fn parse_simple_string(data: &str) -> IResult<&str, RespType> {
@@ -66,4 +74,16 @@ fn parse_array(data: &str) -> IResult<&str, RespType> {
     let (data, len) = delimited(char('*'), i64, crlf)(data)?;
     let (data, elements) = many_m_n(len.try_into().unwrap(), len.try_into().unwrap(), parse)(data)?;
     Ok((data, RespType::Array(elements)))
+}
+
+fn parse_null(data: &str) -> IResult<&str, RespType> {
+    let (data, _) = delimited(char('_'), not_line_ending, crlf)(data)?;
+    Ok((data, RespType::Null))
+}
+
+fn parse_boolean(data: &str) -> IResult<&str, RespType> {
+    map(
+        delimited(char('#'), alt((tag("t"), tag("f"))), crlf),
+        |s: &str| RespType::Boolean(s == "t"),
+    )(data)
 }
