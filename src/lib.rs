@@ -94,4 +94,12 @@ mod tests {
         assert_eq!(parse("#f\r\n"), Ok(("", RespType::Boolean(false))));
         assert!(parse("#s\r\n").is_err());
     }
+
+    #[test]
+    fn test_parse_double() {
+        assert_eq!(
+            parse(",1.23\r\n"),
+            Ok(("", RespType::Double("1.23".to_string())))
+        );
+    }
 }

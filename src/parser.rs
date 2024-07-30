@@ -7,6 +7,7 @@ use nom::character::streaming::char;
 use nom::combinator::map;
 use nom::error::ErrorKind;
 use nom::multi::many_m_n;
+use nom::number::complete::double;
 use nom::sequence::{delimited, terminated};
 use nom::IResult;
 
@@ -20,7 +21,7 @@ pub enum RespType<'a> {
     Array(Vec<RespType<'a>>),
     Null,
     Boolean(bool),
-    Double(&'a str),
+    Double(String),
     BigNumber(i128),
     Pushes,
 }
@@ -33,6 +34,7 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
         parse_bulk_string,
         parse_array,
         parse_boolean,
+        parse_double,
     ))(data)
 }
 
@@ -86,4 +88,9 @@ fn parse_boolean(data: &str) -> IResult<&str, RespType> {
         delimited(char('#'), alt((tag("t"), tag("f"))), crlf),
         |s: &str| RespType::Boolean(s == "t"),
     )(data)
+}
+
+fn parse_double(data: &str) -> IResult<&str, RespType> {
+    let (data, value) = delimited(char(','), double, crlf)(data)?;
+    Ok((data, RespType::Double(format!("{}", value))))
 }
