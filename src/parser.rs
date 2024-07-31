@@ -35,7 +35,8 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
         parse_array,
         parse_boolean,
         parse_double,
-        parse_bignumber
+        parse_bignumber,
+        parse_bulk_error,
     ))(data)
 }
 
@@ -111,5 +112,14 @@ fn parse_bignumber(data: &str) -> IResult<&str, RespType> {
         number.to_string()
     };
 
-    Ok((data, RespType::BigNumber(Box::leak(num_str_with_sign.into_boxed_str()))))
+    Ok((
+        data,
+        RespType::BigNumber(Box::leak(num_str_with_sign.into_boxed_str())),
+    ))
+}
+
+fn parse_bulk_error(data: &str) -> IResult<&str, RespType> {
+    let (data, len) = delimited(char('!'), i64, crlf)(data)?;
+    let (data, value) = terminated(take(len as usize), crlf)(data)?;
+    Ok((data, RespType::BulkError(value)))
 }

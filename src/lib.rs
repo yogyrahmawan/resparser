@@ -118,4 +118,14 @@ mod tests {
             Ok(("", RespType::BigNumber("-123456789012345678901234567890")))
         );
     }
+
+    #[test]
+    fn test_parse_bulk_error() {
+        assert_eq!(
+            parse("!21\r\nSYNTAX invalid syntax\r\n"),
+            Ok(("", RespType::BulkError("SYNTAX invalid syntax")))
+        );
+
+        assert_eq!(parse("!0\r\n\r\n"), Ok(("", RespType::BulkError(""))));
+    }
 }
