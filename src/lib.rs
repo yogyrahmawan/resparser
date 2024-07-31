@@ -102,4 +102,20 @@ mod tests {
             Ok(("", RespType::Double("1.23".to_string())))
         );
     }
+
+    #[test]
+    fn test_bignumber() {
+        assert_eq!(
+            parse("(123456789012345678901234567890\r\n"),
+            Ok(("", RespType::BigNumber("123456789012345678901234567890")))
+        );
+        assert_eq!(
+            parse("(+123456789012345678901234567890\r\n"),
+            Ok(("", RespType::BigNumber("+123456789012345678901234567890")))
+        );
+        assert_eq!(
+            parse("(-123456789012345678901234567890\r\n"),
+            Ok(("", RespType::BigNumber("-123456789012345678901234567890")))
+        );
+    }
 }

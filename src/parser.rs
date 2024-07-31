@@ -1,15 +1,15 @@
 use core::str;
 
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take};
+use nom::bytes::complete::{tag, take, take_while};
 use nom::character::complete::{crlf, i64, not_line_ending};
 use nom::character::streaming::char;
-use nom::combinator::map;
+use nom::combinator::{map, opt};
 use nom::error::ErrorKind;
 use nom::multi::many_m_n;
 use nom::number::complete::double;
-use nom::sequence::{delimited, terminated};
-use nom::IResult;
+use nom::sequence::{delimited, terminated, tuple};
+use nom::{IResult, Parser};
 
 #[derive(PartialEq, Clone, Debug, Hash)]
 pub enum RespType<'a> {
@@ -22,7 +22,7 @@ pub enum RespType<'a> {
     Null,
     Boolean(bool),
     Double(String),
-    BigNumber(i128),
+    BigNumber(&'a str),
     Pushes,
 }
 pub fn parse(data: &str) -> IResult<&str, RespType> {
@@ -35,6 +35,7 @@ pub fn parse(data: &str) -> IResult<&str, RespType> {
         parse_array,
         parse_boolean,
         parse_double,
+        parse_bignumber
     ))(data)
 }
 
@@ -93,4 +94,22 @@ fn parse_boolean(data: &str) -> IResult<&str, RespType> {
 fn parse_double(data: &str) -> IResult<&str, RespType> {
     let (data, value) = delimited(char(','), double, crlf)(data)?;
     Ok((data, RespType::Double(format!("{}", value))))
+}
+
+fn parse_bignumber(data: &str) -> IResult<&str, RespType> {
+    let (data, (_, signed, number)) = tuple((
+        tag("("),
+        opt(char('+').or(char('-'))),
+        take_while(|c: char| c.is_digit(10)),
+    ))(data)?;
+
+    let (data, _) = tag("\r\n")(data)?;
+
+    let num_str_with_sign = if let Some(sign_char) = signed {
+        format!("{}{}", sign_char, number)
+    } else {
+        number.to_string()
+    };
+
+    Ok((data, RespType::BigNumber(Box::leak(num_str_with_sign.into_boxed_str()))))
 }
